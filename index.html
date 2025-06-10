@@ -1,55 +1,228 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OpenADP - Distributed Password-Based Key Derivation</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
 <body>
+    <header class="hero">
+        <nav class="navbar">
+            <div class="nav-container">
+                <div class="logo">
+                    <h1>OpenADP</h1>
+                </div>
+                <ul class="nav-menu">
+                    <li><a href="#about">About</a></li>
+                    <li><a href="#how-it-works">How It Works</a></li>
+                    <li><a href="#benefits">Benefits</a></li>
+                    <li><a href="#implementation">Implementation</a></li>
+                    <li><a href="#contact">Contact</a></li>
+                </ul>
+            </div>
+        </nav>
+        
+        <div class="hero-content">
+            <h1 class="hero-title">Distributed Password-Based Key Derivation</h1>
+            <p class="hero-subtitle">
+                Revolutionary cryptographic infrastructure that eliminates single points of failure 
+                while maintaining the simplicity of password-based encryption.
+            </p>
+            <div class="hero-buttons">
+                <a href="#how-it-works" class="btn btn-primary">Learn More</a>
+                <a href="https://github.com/waywardgeek/openadp" class="btn btn-secondary">View on GitHub</a>
+            </div>
+        </div>
+    </header>
 
-<title>OpenADP</title>
+    <main>
+        <section id="about" class="section">
+            <div class="container">
+                <h2 class="section-title">The Problem with Traditional Cryptography</h2>
+                <div class="problem-grid">
+                    <div class="problem-item">
+                        <div class="problem-icon">⚠️</div>
+                        <h3>Single Point of Failure</h3>
+                        <p>Traditional password-based encryption relies on a single server or device. If it fails, your data is gone forever.</p>
+                    </div>
+                    <div class="problem-item">
+                        <div class="problem-icon">🎯</div>
+                        <h3>Single Point of Attack</h3>
+                        <p>Attackers only need to compromise one system to access all your encrypted data.</p>
+                    </div>
+                    <div class="problem-item">
+                        <div class="problem-icon">🔐</div>
+                        <h3>Trust Concentration</h3>
+                        <p>You must place complete trust in a single entity - whether it's a company, server, or device.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
 
-<h1>OpenADP</h1>
+        <section id="how-it-works" class="section section-alt">
+            <div class="container">
+                <h2 class="section-title">How OpenADP Works</h2>
+                <div class="workflow">
+                    <div class="step">
+                        <div class="step-number">1</div>
+                        <div class="step-content">
+                            <h3>Secret Generation</h3>
+                            <p>A cryptographic secret is generated and split into multiple shares using threshold cryptography.</p>
+                        </div>
+                    </div>
+                    <div class="step">
+                        <div class="step-number">2</div>
+                        <div class="step-content">
+                            <h3>Distributed Storage</h3>
+                            <p>Each share is stored on a different independent server. No single server can reconstruct your key.</p>
+                        </div>
+                    </div>
+                    <div class="step">
+                        <div class="step-number">3</div>
+                        <div class="step-content">
+                            <h3>Threshold Recovery</h3>
+                            <p>To decrypt, you need responses from a threshold of servers. Even if some servers fail, your data remains accessible.</p>
+                        </div>
+                    </div>
+                    <div class="step">
+                        <div class="step-number">4</div>
+                        <div class="step-content">
+                            <h3>Key Reconstruction</h3>
+                            <p>The client automatically reconstructs the encryption key from the recovered shares - completely transparent to you.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
 
-<p>Open source Advanced Data Protection for everyone</p>
+        <section id="benefits" class="section">
+            <div class="container">
+                <h2 class="section-title">Why Choose OpenADP?</h2>
+                <div class="benefits-grid">
+                    <div class="benefit-card">
+                        <div class="benefit-icon">🛡️</div>
+                        <h3>Distributed Trust</h3>
+                        <p>No single entity can access your data. Trust is distributed across multiple independent servers.</p>
+                    </div>
+                    <div class="benefit-card">
+                        <div class="benefit-icon">🔄</div>
+                        <h3>High Availability</h3>
+                        <p>Server failures don't prevent data recovery. System remains functional even with partial server outages.</p>
+                    </div>
+                    <div class="benefit-card">
+                        <div class="benefit-icon">👤</div>
+                        <h3>User Friendly</h3>
+                        <p>Same simple password-based interface. All the complexity is hidden from the user experience.</p>
+                    </div>
+                    <div class="benefit-card">
+                        <div class="benefit-icon">🚀</div>
+                        <h3>Future Proof</h3>
+                        <p>Built on proven cryptographic primitives with extensible architecture for future enhancements.</p>
+                    </div>
+                    <div class="benefit-card">
+                        <div class="benefit-icon">🔓</div>
+                        <h3>Open Source</h3>
+                        <p>Fully open source implementation. Audit the code, run your own servers, contribute improvements.</p>
+                    </div>
+                    <div class="benefit-card">
+                        <div class="benefit-icon">⚡</div>
+                        <h3>High Performance</h3>
+                        <p>Efficient elliptic curve cryptography with optimized networking for fast key derivation.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
 
-<p><a href="https://github.com/OpenADP">Visit us on Github</a>.</p>
+        <section id="implementation" class="section section-alt">
+            <div class="container">
+                <h2 class="section-title">Implementation</h2>
+                <div class="implementation-content">
+                    <div class="code-example">
+                        <h3>Simple Encryption</h3>
+                        <pre><code># Encrypt a file using OpenADP
+python3 encrypt.py sensitive_document.txt
 
-<p?This project is recruiting!  Consider helping out!
-Either <a href="https://github.com/OpenADP/openadp/issues/1">post on Issue #1</a>, or
-<a href="https://discord.gg/TaHNeGsE8j">join us on Discord</a></p?
+# Decrypt the file
+python3 decrypt.py sensitive_document.txt.enc</code></pre>
+                    </div>
+                    <div class="tech-details">
+                        <h3>Technical Foundation</h3>
+                        <ul>
+                            <li><strong>Elliptic Curve Cryptography:</strong> Based on Curve25519 for security and performance</li>
+                            <li><strong>Threshold Cryptography:</strong> Shamir's Secret Sharing with cryptographic enhancements</li>
+                            <li><strong>JSON-RPC Protocol:</strong> Standardized communication with distributed servers</li>
+                            <li><strong>Automatic Failover:</strong> Client automatically handles server failures and recovery</li>
+                            <li><strong>Cryptographic Identity:</strong> Unique identifiers derived from user, device, and backup contexts</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </section>
 
-<h2>Motivation</h2>
+        <section id="architecture" class="section">
+            <div class="container">
+                <h2 class="section-title">System Architecture</h2>
+                <div class="architecture-diagram">
+                    <div class="client-box">
+                        <h4>Client Application</h4>
+                        <p>Handles secret sharing, server communication, and key reconstruction</p>
+                    </div>
+                    <div class="arrows">
+                        <div class="arrow">Share 1</div>
+                        <div class="arrow">Share 2</div>
+                        <div class="arrow">Share N</div>
+                    </div>
+                    <div class="servers-box">
+                        <div class="server">
+                            <h4>Server 1</h4>
+                            <p>Independent database</p>
+                        </div>
+                        <div class="server">
+                            <h4>Server 2</h4>
+                            <p>Independent database</p>
+                        </div>
+                        <div class="server">
+                            <h4>Server N</h4>
+                            <p>Independent database</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
 
-<p?WaywardGeek helped build
-<a href="https://developer.android.com/about/versions/pie/security/ckv-whitepaper">
-Google's version of Advanced Data Protection</a> back in 2018.  Today, such systems
-<a href="https://www.bloomberg.com/news/articles/2025-02-21/apple-removes-end-to-end-encryption-feature-from-uk-after-backdoor-order">
-are under attack</a>).  There is a real threat that governments will order
-creation of secret mass surveillance backdoors like
-<a href="https://www.reuters.com/article/technology/yahoo-secretly-scanned-customer-emails-for-us-intelligence-sources-idUSKCN1241YV/">
-what Yahoo was forced to build</a>.  Existing systems defend backups from
-warrants, but there is no transparency, and no way for the public to know if
-the system has been compromised.</p>
+    <footer id="contact" class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h3>OpenADP</h3>
+                    <p>Distributed password-based key derivation for a more secure future.</p>
+                </div>
+                <div class="footer-section">
+                    <h4>Resources</h4>
+                    <ul>
+                        <li><a href="https://github.com/waywardgeek/openadp">GitHub Repository</a></li>
+                        <li><a href="#implementation">Documentation</a></li>
+                        <li><a href="https://servers.openadp.org">Server Network</a></li>
+                    </ul>
+                </div>
+                <div class="footer-section">
+                    <h4>Community</h4>
+                    <ul>
+                        <li><a href="#">Contribute</a></li>
+                        <li><a href="#">Security Audits</a></li>
+                        <li><a href="#">Run a Server</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2024 OpenADP Project. Open source under MIT license.</p>
+            </div>
+        </div>
+    </footer>
 
-<p>This is where OpenADP comes in.  All code will be 100% open source, and rather
-than relying on proprietary HSMs (Hardware Security Modules), we'll use
-distributed trust.  Users don't have to trust any particular OpenADP operator,
-just that a threshold of them are honest.</p>
-
-<p>When turned up, the whole world will be able to securely encrypt their data for
-free, protecting backups, passwords, message history, and more, if we can get
-existing applications to use to the new data protection service.</p>
-
-<h2>Volunteering</h2>
-
-<p>We need help, so please consider volunteering!  We know how to build the
-server, which won't be much work.  However, we'll need folks to run the server
-to provide the distributed trust network.  Areas where we need help include:</p>
-
-<ul>
-<li>Running OpenADP servers. This is a T-of-N scheme, where users will need
-say 9 of 15 nodes to be available to recover their backups.</li>
-<li>Android client app, and preferably tight integration with the platform as an
-alternate backup service.</li>
-<li>Same with iOS</li>
-<li>Authentication. Users should register, and login before they can use any of
-their limited guesses to their phone unlock secret.</li>
-</ul>
+    <script src="script.js"></script>
 </body>
-</html>
+</html> 
