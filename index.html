@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>OpenADP - Distributed Password-Based Key Derivation</title>
+    <title>OpenADP - Open Source Advanced Data Protection for Everyone</title>
     <link rel="stylesheet" href="styles.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 </head>
@@ -13,6 +13,7 @@
             <div class="nav-container">
                 <div class="logo">
                     <h1>OpenADP</h1>
+                    <span class="logo-tagline">Advanced Data Protection</span>
                 </div>
                 <ul class="nav-menu">
                     <li><a href="#about">About</a></li>
@@ -25,10 +26,12 @@
         </nav>
         
         <div class="hero-content">
-            <h1 class="hero-title">Distributed Password-Based Key Derivation</h1>
+            <div class="hero-badge">The Response to Apple's Banned Feature</div>
+            <h1 class="hero-title">Open Source Advanced Data Protection for Everyone</h1>
             <p class="hero-subtitle">
-                Revolutionary cryptographic infrastructure that eliminates single points of failure 
-                while maintaining the simplicity of password-based encryption.
+                When governments banned Apple's Advanced Data Protection, we built an open source version 
+                that no single country can shut down. Revolutionary distributed cryptography that 
+                eliminates single points of failure while maintaining the simplicity of password-based encryption.
             </p>
             <div class="hero-buttons">
                 <a href="#how-it-works" class="btn btn-primary">Learn More</a>
@@ -40,23 +43,35 @@
     <main>
         <section id="about" class="section">
             <div class="container">
-                <h2 class="section-title">The Problem with Traditional Cryptography</h2>
+                <h2 class="section-title">Why OpenADP Exists: The Encryption Wars Are Real</h2>
+                <div class="context-banner">
+                    <div class="context-content">
+                        <h3>🚨 The Crisis That Sparked OpenADP</h3>
+                        <p>Apple was <strong>forced to remove</strong> end-to-end iCloud encryption ("Advanced Data Protection") from the UK after government orders demanded backdoors for accessing user data. This isn't theoretical - it's happening now.</p>
+                    </div>
+                </div>
+                
                 <div class="problem-grid">
                     <div class="problem-item">
-                        <div class="problem-icon">⚠️</div>
-                        <h3>Single Point of Failure</h3>
-                        <p>Traditional password-based encryption relies on a single server or device. If it fails, your data is gone forever.</p>
+                        <div class="problem-icon">🏛️</div>
+                        <h3>Government Backdoor Demands</h3>
+                        <p>Governments worldwide are forcing tech companies to remove encryption or build backdoors. When you control the company, you control everyone's data.</p>
                     </div>
                     <div class="problem-item">
-                        <div class="problem-icon">🎯</div>
-                        <h3>Single Point of Attack</h3>
-                        <p>Attackers only need to compromise one system to access all your encrypted data.</p>
+                        <div class="problem-icon">👁️</div>
+                        <h3>Secret Mass Surveillance</h3>
+                        <p>Current systems enable secret, bulk surveillance of user data. Single corporate entities become surveillance chokepoints for entire nations.</p>
                     </div>
                     <div class="problem-item">
-                        <div class="problem-icon">🔐</div>
-                        <h3>Trust Concentration</h3>
-                        <p>You must place complete trust in a single entity - whether it's a company, server, or device.</p>
+                        <div class="problem-icon">⚖️</div>
+                        <h3>Jurisdiction Shopping</h3>
+                        <p>Governments can simply target the weakest jurisdiction where a company operates, compromising users worldwide through a single legal order.</p>
                     </div>
+                </div>
+
+                <div class="solution-statement">
+                    <h3>OpenADP's Answer: Nation-State Resistance Through Distributed Trust</h3>
+                    <p>Instead of one company that can be forced to comply, OpenADP distributes trust across multiple independent servers in different jurisdictions. Governments must negotiate with operators in multiple countries to access any user's data - ending secret mass surveillance while still allowing legitimate law enforcement when multiple jurisdictions agree.</p>
                 </div>
             </div>
         </section>
@@ -99,38 +114,45 @@
 
         <section id="benefits" class="section">
             <div class="container">
-                <h2 class="section-title">Why Choose OpenADP?</h2>
+                <h2 class="section-title">Why OpenADP Succeeds Where Big Tech Failed</h2>
                 <div class="benefits-grid">
                     <div class="benefit-card">
                         <div class="benefit-icon">🛡️</div>
-                        <h3>Distributed Trust</h3>
-                        <p>No single entity can access your data. Trust is distributed across multiple independent servers.</p>
+                        <h3>Nation-State Resistance</h3>
+                        <p>Unlike Apple or Google, no single government can force OpenADP to remove encryption. Distributed across multiple jurisdictions and operators.</p>
+                    </div>
+                    <div class="benefit-card">
+                        <div class="benefit-icon">🌍</div>
+                        <h3>Multi-Jurisdiction Protection</h3>
+                        <p>Governments must coordinate across multiple countries to access data. This creates natural checks and balances against abuse.</p>
+                    </div>
+                    <div class="benefit-card">
+                        <div class="benefit-icon">🚫</div>
+                        <h3>No Corporate Control</h3>
+                        <p>No CEO can be threatened, no company can be pressured. OpenADP's decentralized nature makes it impossible to shut down or compromise centrally.</p>
                     </div>
                     <div class="benefit-card">
                         <div class="benefit-icon">🔄</div>
                         <h3>High Availability</h3>
-                        <p>Server failures don't prevent data recovery. System remains functional even with partial server outages.</p>
+                        <p>Server failures or even government seizures don't prevent data recovery. System remains functional with partial server outages.</p>
                     </div>
                     <div class="benefit-card">
                         <div class="benefit-icon">👤</div>
                         <h3>User Friendly</h3>
-                        <p>Same simple password-based interface. All the complexity is hidden from the user experience.</p>
-                    </div>
-                    <div class="benefit-card">
-                        <div class="benefit-icon">🚀</div>
-                        <h3>Future Proof</h3>
-                        <p>Built on proven cryptographic primitives with extensible architecture for future enhancements.</p>
+                        <p>Same simple password-based interface as iCloud or Google. All the complexity is hidden - users just enter their password.</p>
                     </div>
                     <div class="benefit-card">
                         <div class="benefit-icon">🔓</div>
-                        <h3>Open Source</h3>
-                        <p>Fully open source implementation. Audit the code, run your own servers, contribute improvements.</p>
+                        <h3>Open Source Transparency</h3>
+                        <p>No secret backdoors possible. Every line of code is auditable. Run your own servers, contribute improvements, verify security.</p>
                     </div>
-                    <div class="benefit-card">
-                        <div class="benefit-icon">⚡</div>
-                        <h3>High Performance</h3>
-                        <p>Efficient elliptic curve cryptography with optimized networking for fast key derivation.</p>
-                    </div>
+                </div>
+                
+                <div class="quote-section">
+                    <blockquote>
+                        "We need to take action now to protect users... The UK and similarly confused governments will need to negotiate with operators in multiple countries to get access to any given user's keys."
+                    </blockquote>
+                    <cite>- From the original call to action that started OpenADP</cite>
                 </div>
             </div>
         </section>
