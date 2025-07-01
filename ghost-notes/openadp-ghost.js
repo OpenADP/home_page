@@ -1,7 +1,7 @@
 // Ghost Notes with OpenADP Integration
 // Properly secures low-entropy PINs using distributed secret sharing
 
-import { generateEncryptionKey, recoverEncryptionKey, deriveIdentifiers, passwordToPin } from '../sdk/browser-javascript/keygen.js';
+import { generateEncryptionKey, recoverEncryptionKey, deriveIdentifiers, passwordToPin, Identity } from '../sdk/browser-javascript/keygen.js';
 import { getServers, getFallbackServerInfo } from '../sdk/browser-javascript/client.js';
 
 class OpenADPGhostNotes {
@@ -167,15 +167,18 @@ class OpenADPGhostNotes {
             // Generate a unique user ID for this installation
             const userID = this.generateUserID();
             
-            // Create a dummy filename for the ghost notes vault
-            const vaultFilename = 'ghost-notes-vault';
+            // Create identity for OpenADP
+            const identity = new Identity(
+                userID,                    // uid - User ID
+                'ghost-notes-browser',     // did - Device ID (browser-based app)
+                'ghost-notes-vault'        // bid - Backup ID (vault identifier)
+            );
             
             // Use OpenADP to generate the master encryption key
             console.log('🔐 Generating master key using OpenADP distributed secret sharing...');
             const result = await generateEncryptionKey(
-                vaultFilename,
+                identity,
                 pin,  // Low-entropy PIN
-                userID,
                 maxGuesses,
                 0,  // No expiration
                 this.openadpServers
@@ -254,13 +257,16 @@ class OpenADPGhostNotes {
             }
             
             // Use OpenADP to recover the master encryption key
-            const vaultFilename = 'ghost-notes-vault';
+            const identity = new Identity(
+                this.settings.userID,      // uid - User ID
+                'ghost-notes-browser',     // did - Device ID (browser-based app)  
+                'ghost-notes-vault'        // bid - Backup ID (vault identifier)
+            );
             
             console.log('🔐 Recovering master key using OpenADP...');
             const result = await recoverEncryptionKey(
-                vaultFilename,
+                identity,
                 pin,  // Low-entropy PIN
-                this.settings.userID,
                 this.openadpServers,
                 this.settings.serverThreshold,
                 authCodes

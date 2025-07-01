@@ -19,8 +19,6 @@
 ./ghost-notes/manifest.json
 ./ghost-notes/README-OpenADP.md
 ./ghost-notes/README-Simple.md
-./ghost-notes/debug.html
-./ghost-notes/debug-openadp.html
 ./ghost-notes/styles.css
 ./ghost-notes/README.md
 ./sdk/browser-javascript/ocrypt.js
