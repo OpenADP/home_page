@@ -20,7 +20,7 @@ import { sha256 } from '@noble/hashes/sha256';
 
 // Import browser-compatible OpenADP components
 import { generateEncryptionKey, recoverEncryptionKey } from './keygen.js';
-import { getServers, getFallbackServerInfo } from './client.js';
+import { getServers, getFallbackServerInfo } from './client.browser.js';
 
 /**
  * Browser-compatible random bytes generation
@@ -247,61 +247,15 @@ async function recoverWithoutRefresh(metadataBytes, pin) {
     const filename = `${metadata.user_id}#${metadata.app_id}#${metadata.backup_id}`;
 
     try {
-        // Step 1: Convert server URLs back to ServerInfo objects
-        console.log('🌐 Getting server information for recovery...');
-        let allServers;
-        try {
-            allServers = await getServers("https://servers.openadp.org/api/servers.json");
-        } catch (error) {
-            console.log(`   ⚠️  Failed to fetch from registry: ${error.message}`);
-            allServers = getFallbackServerInfo();
-        }
-
-        // Match stored server URLs with registry to get public keys
-        const serverInfos = [];
-        for (const serverURL of metadata.servers) {
-            const serverInfo = allServers.find(s => s.url === serverURL);
-            if (serverInfo) {
-                serverInfos.push(serverInfo);
-                console.log(`   ✅ ${serverURL} - matched in registry`);
-            } else {
-                // Create ServerInfo without public key if not found in registry
-                serverInfos.push({ url: serverURL, publicKey: "", country: "Unknown" });
-                console.log(`   ⚠️  ${serverURL} - not found in registry, using without encryption`);
-            }
-        }
-
-        if (serverInfos.length === 0) {
-            throw new Error('No servers from metadata could be resolved');
-        }
-
-        // Step 2: Reconstruct AuthCodes object from base auth code
-        const authCodes = {
-            baseAuthCode: metadata.auth_code,
-            serverAuthCodes: {},
-            userID: metadata.user_id
-        };
-
-        // Generate server-specific auth codes (same logic as during registration)
-        for (const serverURL of metadata.servers) {
-            const combined = `${metadata.auth_code}:${serverURL}`;
-            const encoder = new TextEncoder();
-            const data = encoder.encode(combined);
-            const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-            const hashArray = new Uint8Array(hashBuffer);
-            const hashHex = Array.from(hashArray).map(b => b.toString(16).padStart(2, '0')).join('');
-            authCodes.serverAuthCodes[serverURL] = hashHex;
-        }
-
-        // Step 3: Recover encryption key using REAL OpenADP protocol
+        // Step 1: Recover encryption key using REAL OpenADP protocol
         console.log('🔑 Recovering encryption key from OpenADP servers...');
         const result = await recoverEncryptionKey(
             filename,
             pin,
             metadata.user_id,
-            serverInfos,
+            metadata.servers,
             metadata.threshold,
-            authCodes
+            metadata.auth_code
         );
 
         if (result.error) {

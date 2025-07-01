@@ -6,7 +6,6 @@
 import { x25519 } from '@noble/curves/ed25519';
 import { sha256 } from '@noble/hashes/sha256';
 import { hkdf } from '@noble/hashes/hkdf';
-import { gcm } from '@noble/ciphers/aes';
 
 const PROTOCOL_NAME = "Noise_NK_25519_AESGCM_SHA256";
 const DHLEN = 32;
@@ -46,11 +45,11 @@ export class NoiseNK {
         this.k = null;                              // symmetric key (32 bytes when set)
         this.n = 0;                                 // nonce counter
 
-        // Transport keys and counters (separate for send/receive)
-        this.sendKey = null;                        // key for sending messages
-        this.receiveKey = null;                     // key for receiving messages
-        this.sendCounter = 0;                       // counter for sending
-        this.receiveCounter = 0;                    // counter for receiving
+        // Transport keys (after handshake)
+        this.sendKey = null;                        // key for sending
+        this.receiveKey = null;                     // key for receiving
+        this.sendNonce = 0;                         // nonce counter for sending
+        this.receiveNonce = 0;                      // nonce counter for receiving
 
         // Key pairs and public keys
         this.s = null;                              // local static key pair
@@ -99,7 +98,8 @@ export class NoiseNK {
             this.h.set(protocolName);
             // Pad with zeros if needed (already zero-initialized)
         } else {
-            this.h.set(sha256(protocolName));
+            const hash_result = sha256(protocolName);
+            this.h.set(new Uint8Array(hash_result));
         }
 
         this.ck.set(this.h);
@@ -110,29 +110,16 @@ export class NoiseNK {
      * Mix data into handshake hash
      */
     _mixHash(data) {
-        // Ensure data is a Uint8Array
-        if (!data || typeof data.length === 'undefined') {
-            console.error('_mixHash: data is not array-like:', data);
-            throw new Error('_mixHash: data must be array-like');
-        }
-        
-        // Convert to Uint8Array if needed
-        let dataBytes;
-        if (data instanceof Uint8Array) {
-            dataBytes = data;
-        } else if (Array.isArray(data) || data.buffer) {
-            dataBytes = new Uint8Array(data);
-        } else {
-            console.error('_mixHash: invalid data type:', typeof data, data);
-            throw new Error('_mixHash: data must be convertible to Uint8Array');
-        }
-        
         // Mix data into hash state: h = SHA256(h || data)
-        const combined = new Uint8Array(this.h.length + dataBytes.length);
+        const combined = new Uint8Array(this.h.length + data.length);
         combined.set(this.h);
-        combined.set(dataBytes, this.h.length);
+        combined.set(data, this.h.length);
         const hash_result = sha256(combined);
-        this.h.set(hash_result);
+        // Ensure hash_result is a Uint8Array and matches the expected length
+        if (hash_result.length !== HASHLEN) {
+            throw new Error(`Hash result length mismatch: expected ${HASHLEN}, got ${hash_result.length}`);
+        }
+        this.h.set(new Uint8Array(hash_result));
     }
 
     /**
@@ -148,13 +135,13 @@ export class NoiseNK {
     /**
      * Encrypt and hash payload
      */
-    _encryptAndHash(plaintext) {
+    async _encryptAndHash(plaintext) {
         if (!this.k) {
             this._mixHash(plaintext);
             return plaintext;
         }
 
-        const ciphertext = this._encrypt(plaintext);
+        const ciphertext = await this._encrypt(plaintext);
         this._mixHash(ciphertext);
         return ciphertext;
     }
@@ -162,22 +149,22 @@ export class NoiseNK {
     /**
      * Decrypt and hash ciphertext
      */
-    _decryptAndHash(ciphertext) {
+    async _decryptAndHash(ciphertext) {
         if (!this.k) {
             // No key yet - return ciphertext as plaintext
             this._mixHash(ciphertext);
             return ciphertext;
         }
 
-        const plaintext = this._decrypt(ciphertext);
+        const plaintext = await this._decrypt(ciphertext);
         this._mixHash(ciphertext);
         return plaintext;
     }
 
     /**
-     * AEAD encrypt with current key and nonce using Noble Ciphers
+     * AEAD encrypt with current key and nonce using WebCrypto API
      */
-    _encrypt(plaintext) {
+    async _encrypt(plaintext) {
         if (!this.k) {
             throw new Error('No encryption key available');
         }
@@ -189,23 +176,38 @@ export class NoiseNK {
         view.setUint32(8, this.n & 0xffffffff, false);              // big-endian low 32 bits
 
         try {
-            // Use Noble Ciphers AES-GCM with AAD for handshake
-            // Noble Ciphers API: gcm(key, nonce, aad?) where aad is optional
-            const cipher = this.h.length > 0 ? gcm(this.k, nonce, this.h) : gcm(this.k, nonce);
-            const ciphertext = cipher.encrypt(plaintext);
+            // Import key for WebCrypto
+            const cryptoKey = await crypto.subtle.importKey(
+                'raw',
+                this.k,
+                { name: 'AES-GCM', length: 256 },
+                false,
+                ['encrypt']
+            );
+
+            // Encrypt using WebCrypto AES-GCM
+            const encrypted = await crypto.subtle.encrypt(
+                {
+                    name: 'AES-GCM',
+                    iv: nonce,
+                    additionalData: this.h
+                },
+                cryptoKey,
+                plaintext
+            );
 
             this.n++;
 
-            return ciphertext;
+            return new Uint8Array(encrypted);
         } catch (error) {
             throw new Error(`AES-GCM encryption failed: ${error.message}`);
         }
     }
 
     /**
-     * AEAD decrypt with current key and nonce using Noble Ciphers
+     * AEAD decrypt with current key and nonce using WebCrypto API
      */
-    _decrypt(ciphertext) {
+    async _decrypt(ciphertext) {
         if (!this.k) {
             throw new Error('No decryption key available');
         }
@@ -217,14 +219,29 @@ export class NoiseNK {
         view.setUint32(8, this.n & 0xffffffff, false);              // big-endian low 32 bits
 
         try {
-            // Use Noble Ciphers AES-GCM with AAD for handshake
-            // Noble Ciphers API: gcm(key, nonce, aad?) where aad is optional
-            const cipher = this.h.length > 0 ? gcm(this.k, nonce, this.h) : gcm(this.k, nonce);
-            const plaintext = cipher.decrypt(ciphertext);
+            // Import key for WebCrypto
+            const cryptoKey = await crypto.subtle.importKey(
+                'raw',
+                this.k,
+                { name: 'AES-GCM', length: 256 },
+                false,
+                ['decrypt']
+            );
+
+            // Decrypt using WebCrypto AES-GCM
+            const decrypted = await crypto.subtle.decrypt(
+                {
+                    name: 'AES-GCM',
+                    iv: nonce,
+                    additionalData: this.h
+                },
+                cryptoKey,
+                ciphertext
+            );
 
             this.n++;
 
-            return plaintext;
+            return new Uint8Array(decrypted);
         } catch (error) {
             throw new Error(`AES-GCM decryption failed: ${error.message}`);
         }
@@ -266,29 +283,44 @@ export class NoiseNK {
     /**
      * Encrypt transport message
      */
-    encrypt(plaintext) {
+    async encrypt(plaintext) {
         if (!this.handshakeComplete) {
             throw new Error('Handshake not complete');
+        }
+
+        if (!this.sendKey) {
+            throw new Error('Send key not available');
         }
 
         // Create 96-bit nonce: 4 bytes zeros + 8-byte counter (big-endian)
         const nonce = new Uint8Array(12);
         const view = new DataView(nonce.buffer);
-        view.setUint32(4, Math.floor(this.sendCounter / 0x100000000), false);
-        view.setUint32(8, this.sendCounter & 0xffffffff, false);
-
-        console.log(`🔍 Transport encrypt: sendCounter=${this.sendCounter}, nonce=${Array.from(nonce).map(x => x.toString(16).padStart(2, '0')).join('')}, sendKey=${Array.from(this.sendKey.slice(0, 8)).map(x => x.toString(16).padStart(2, '0')).join('')}...`);
+        view.setUint32(4, Math.floor(this.sendNonce / 0x100000000), false);
+        view.setUint32(8, this.sendNonce & 0xffffffff, false);
 
         try {
-            // Use Noble Ciphers AES-GCM (no AAD for transport messages)
-            const cipher = gcm(this.sendKey, nonce); // key, nonce, no AAD
-            const ciphertext = cipher.encrypt(plaintext);
+            // Import key for WebCrypto
+            const cryptoKey = await crypto.subtle.importKey(
+                'raw',
+                this.sendKey,
+                { name: 'AES-GCM', length: 256 },
+                false,
+                ['encrypt']
+            );
 
-            console.log(`🔍 Transport encrypt result: ${Array.from(ciphertext.slice(0, 16)).map(x => x.toString(16).padStart(2, '0')).join('')}...`);
+            // Encrypt using WebCrypto AES-GCM (no AAD for transport messages)
+            const encrypted = await crypto.subtle.encrypt(
+                {
+                    name: 'AES-GCM',
+                    iv: nonce
+                },
+                cryptoKey,
+                plaintext
+            );
 
-            this.sendCounter++;
+            this.sendNonce++;
 
-            return ciphertext;
+            return new Uint8Array(encrypted);
         } catch (error) {
             throw new Error(`Transport encryption failed: ${error.message}`);
         }
@@ -297,32 +329,45 @@ export class NoiseNK {
     /**
      * Decrypt transport message
      */
-    decrypt(ciphertext) {
+    async decrypt(ciphertext) {
         if (!this.handshakeComplete) {
             throw new Error('Handshake not complete');
+        }
+
+        if (!this.receiveKey) {
+            throw new Error('Receive key not available');
         }
 
         // Create 96-bit nonce: 4 bytes zeros + 8-byte counter (big-endian)
         const nonce = new Uint8Array(12);
         const view = new DataView(nonce.buffer);
-        view.setUint32(4, Math.floor(this.receiveCounter / 0x100000000), false);
-        view.setUint32(8, this.receiveCounter & 0xffffffff, false);
-
-        console.log(`🔍 Transport decrypt: receiveCounter=${this.receiveCounter}, nonce=${Array.from(nonce).map(x => x.toString(16).padStart(2, '0')).join('')}, receiveKey=${Array.from(this.receiveKey.slice(0, 8)).map(x => x.toString(16).padStart(2, '0')).join('')}...`);
-        console.log(`🔍 Transport decrypt ciphertext: ${Array.from(ciphertext.slice(0, 16)).map(x => x.toString(16).padStart(2, '0')).join('')}...`);
+        view.setUint32(4, Math.floor(this.receiveNonce / 0x100000000), false);
+        view.setUint32(8, this.receiveNonce & 0xffffffff, false);
 
         try {
-            // Use Noble Ciphers AES-GCM (no AAD for transport messages)
-            const cipher = gcm(this.receiveKey, nonce); // key, nonce, no AAD
-            const plaintext = cipher.decrypt(ciphertext);
+            // Import key for WebCrypto
+            const cryptoKey = await crypto.subtle.importKey(
+                'raw',
+                this.receiveKey,
+                { name: 'AES-GCM', length: 256 },
+                false,
+                ['decrypt']
+            );
 
-            console.log(`🔍 Transport decrypt result: ${Array.from(plaintext.slice(0, 16)).map(x => x.toString(16).padStart(2, '0')).join('')}...`);
+            // Decrypt using WebCrypto AES-GCM (no AAD for transport messages)
+            const decrypted = await crypto.subtle.decrypt(
+                {
+                    name: 'AES-GCM',
+                    iv: nonce
+                },
+                cryptoKey,
+                ciphertext
+            );
 
-            this.receiveCounter++;
+            this.receiveNonce++;
 
-            return plaintext;
+            return new Uint8Array(decrypted);
         } catch (error) {
-            console.log(`❌ Transport decrypt error: ${error.message}`);
             throw new Error(`Transport decryption failed: ${error.message}`);
         }
     }
@@ -330,29 +375,29 @@ export class NoiseNK {
     /**
      * Write handshake message (generic)
      */
-    writeMessage(payload = new Uint8Array()) {
+    async writeMessage(payload = new Uint8Array()) {
         if (this.initiator) {
-            return this.writeMessageA(payload);
+            return await this.writeMessageA(payload);
         } else {
-            return this.writeMessageB(payload);
+            return await this.writeMessageB(payload);
         }
     }
 
     /**
      * Read handshake message (generic)
      */
-    readMessage(message) {
+    async readMessage(message) {
         if (this.initiator) {
-            return this.readMessageB(message);
+            return await this.readMessageB(message);
         } else {
-            return this.readMessageA(message);
+            return await this.readMessageA(message);
         }
     }
 
     /**
      * Write message A (initiator -> responder)
      */
-    writeMessageA(payload = new Uint8Array()) {
+    async writeMessageA(payload = new Uint8Array()) {
         if (!this.initiator) {
             throw new Error('Only initiator can write message A');
         }
@@ -371,7 +416,7 @@ export class NoiseNK {
         this._mixKey(es);
 
         // Encrypt and authenticate payload
-        const encryptedPayload = this._encryptAndHash(payload);
+        const encryptedPayload = await this._encryptAndHash(payload);
 
         // Combine message parts
         const finalMessage = new Uint8Array(message.length + encryptedPayload.length);
@@ -384,7 +429,7 @@ export class NoiseNK {
     /**
      * Read message B (initiator <- responder)
      */
-    readMessageB(message) {
+    async readMessageB(message) {
         if (!this.initiator) {
             throw new Error('Only initiator can read message B');
         }
@@ -404,16 +449,16 @@ export class NoiseNK {
 
         // Extract and decrypt payload
         const encryptedPayload = message.slice(offset);
-        const payload = this._decryptAndHash(encryptedPayload);
+        const payload = await this._decryptAndHash(encryptedPayload);
 
         // Handshake complete
         this.handshakeComplete = true;
         const keys = this._split();
-        // Initiator: sends with k1, receives with k2
+        // Initiator uses k1 for sending, k2 for receiving
         this.sendKey = keys.k1;
         this.receiveKey = keys.k2;
-        this.sendCounter = 0;
-        this.receiveCounter = 0;
+        this.sendNonce = 0;
+        this.receiveNonce = 0;
 
         return payload;
     }
@@ -421,7 +466,7 @@ export class NoiseNK {
     /**
      * Read message A (responder <- initiator)
      */
-    readMessageA(message) {
+    async readMessageA(message) {
         if (this.initiator) {
             throw new Error('Only responder can read message A');
         }
@@ -441,7 +486,7 @@ export class NoiseNK {
 
         // Extract and decrypt payload
         const encryptedPayload = message.slice(offset);
-        const payload = this._decryptAndHash(encryptedPayload);
+        const payload = await this._decryptAndHash(encryptedPayload);
 
         return payload;
     }
@@ -449,7 +494,7 @@ export class NoiseNK {
     /**
      * Write message B (responder -> initiator)
      */
-    writeMessageB(payload = new Uint8Array()) {
+    async writeMessageB(payload = new Uint8Array()) {
         if (this.initiator) {
             throw new Error('Only responder can write message B');
         }
@@ -468,7 +513,7 @@ export class NoiseNK {
         this._mixKey(ee);
 
         // Encrypt and authenticate payload
-        const encryptedPayload = this._encryptAndHash(payload);
+        const encryptedPayload = await this._encryptAndHash(payload);
 
         // Combine message parts
         const finalMessage = new Uint8Array(message.length + encryptedPayload.length);
@@ -478,11 +523,11 @@ export class NoiseNK {
         // Handshake complete
         this.handshakeComplete = true;
         const keys = this._split();
-        // Responder: sends with k2, receives with k1
+        // Responder uses k2 for sending, k1 for receiving
         this.sendKey = keys.k2;
         this.receiveKey = keys.k1;
-        this.sendCounter = 0;
-        this.receiveCounter = 0;
+        this.sendNonce = 0;
+        this.receiveNonce = 0;
 
         return finalMessage;
     }

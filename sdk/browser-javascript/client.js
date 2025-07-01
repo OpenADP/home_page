@@ -9,7 +9,8 @@
  * - MultiServerClient: High-level client managing multiple servers
  */
 
-import { NoiseNK, generateStaticKeyPair } from './noise-nk.js';
+import { NoiseNK, generateStaticKeyPair } from './noise-nk.browser.js';
+import * as debug from './debug.js';
 
 // Error codes matching Python implementation
 export const ErrorCode = {
@@ -33,10 +34,11 @@ export const ServerSelectionStrategy = {
  * Server information from registry or configuration
  */
 export class ServerInfo {
-    constructor(url, publicKey = "", country = "Unknown") {
+    constructor(url, publicKey = "", country = "Unknown", remainingGuesses = -1) {
         this.url = url;
         this.publicKey = publicKey;
         this.country = country || "Unknown";
+        this.remainingGuesses = remainingGuesses; // -1 means unknown, >=0 means known remaining guesses
     }
 }
 
@@ -283,6 +285,10 @@ export class OpenADPClient {
     async _makeRequest(method, params = null) {
         const request = new JSONRPCRequest(method, params, this.requestId++);
 
+        if (debug.isDebugModeEnabled()) {
+            debug.debugLog(`📤 JAVASCRIPT: Unencrypted JSON request: ${JSON.stringify(request.toDict(), null, 2)}`);
+        }
+
         try {
             const response = await fetch(this.url, {
                 method: 'POST',
@@ -302,6 +308,11 @@ export class OpenADPClient {
             }
 
             const responseData = await response.json();
+            
+            if (debug.isDebugModeEnabled()) {
+                debug.debugLog(`📥 JAVASCRIPT: Unencrypted JSON response: ${JSON.stringify(responseData, null, 2)}`);
+            }
+            
             const jsonRpcResponse = JSONRPCResponse.fromDict(responseData);
 
             if (jsonRpcResponse.error) {
@@ -472,6 +483,10 @@ export class EncryptedOpenADPClient {
     async _makeUnencryptedRequest(method, params = null) {
         const request = new JSONRPCRequest(method, params, this.requestId++);
 
+        if (debug.isDebugModeEnabled()) {
+            debug.debugLog(`📤 JAVASCRIPT: Unencrypted JSON request: ${JSON.stringify(request.toDict(), null, 2)}`);
+        }
+
         try {
             const response = await fetch(this.url, {
                 method: 'POST',
@@ -491,6 +506,11 @@ export class EncryptedOpenADPClient {
             }
 
             const responseData = await response.json();
+            
+            if (debug.isDebugModeEnabled()) {
+                debug.debugLog(`📥 JAVASCRIPT: Unencrypted JSON response: ${JSON.stringify(responseData, null, 2)}`);
+            }
+            
             const jsonRpcResponse = JSONRPCResponse.fromDict(responseData);
 
             if (jsonRpcResponse.error) {
@@ -552,6 +572,10 @@ export class EncryptedOpenADPClient {
                 methodCall.auth = authData;
             }
 
+            if (debug.isDebugModeEnabled()) {
+                debug.debugLog(`Method call (before encryption): ${JSON.stringify(methodCall)}`);
+            }
+
             // Serialize and encrypt the method call
             const methodCallJson = JSON.stringify(methodCall);
             const methodCallBytes = new TextEncoder().encode(methodCallJson);
@@ -567,6 +591,10 @@ export class EncryptedOpenADPClient {
                 }],
                 id: this.requestId++
             };
+
+            if (debug.isDebugModeEnabled()) {
+                debug.debugLog(`📤 JAVASCRIPT: Encrypted call JSON request: ${JSON.stringify(encryptedRequest, null, 2)}`);
+            }
 
             const response = await fetch(this.url, {
                 method: 'POST',
@@ -587,6 +615,10 @@ export class EncryptedOpenADPClient {
 
             const encryptedResponse = await response.json();
 
+            if (debug.isDebugModeEnabled()) {
+                debug.debugLog(`📥 JAVASCRIPT: Encrypted call JSON response: ${JSON.stringify(encryptedResponse, null, 2)}`);
+            }
+
             if (encryptedResponse.error) {
                 throw new OpenADPError(
                     ErrorCode.SERVER_ERROR,
@@ -601,6 +633,10 @@ export class EncryptedOpenADPClient {
             const decryptedBytes = await this.noise.decrypt(encryptedDataBytes);
             const decryptedJson = new TextDecoder().decode(decryptedBytes);
             const responseData = JSON.parse(decryptedJson);
+
+            if (debug.isDebugModeEnabled()) {
+                debug.debugLog(`Decrypted response (after encryption): ${JSON.stringify(responseData)}`);
+            }
 
             const jsonRpcResponse = JSONRPCResponse.fromDict(responseData);
 
@@ -636,15 +672,17 @@ export class EncryptedOpenADPClient {
     }
 
     async _performHandshake() {
-        // Step 1: Generate session ID
-        const sessionID = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        // Generate session ID
+        const sessionID = debug.isDebugModeEnabled() 
+            ? "deterministic_session_javascript"
+            : `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
         
         // Step 2: Initialize Noise-NK as initiator
         this.noise = new NoiseNK();
         this.noise.initializeInitiator(this.serverPublicKey);
 
         // Step 3: Create first handshake message
-        const handshakeMsg1 = this.noise.writeMessage(new Uint8Array(0)); // Empty payload
+        const handshakeMsg1 = await this.noise.writeMessage(new Uint8Array(0)); // Empty payload
 
         // Step 4: Send noise_handshake request (Round 1)
         const handshakeRequest = {
@@ -656,6 +694,10 @@ export class EncryptedOpenADPClient {
             }],
             id: this.requestId++
         };
+
+        if (debug.isDebugModeEnabled()) {
+            debug.debugLog(`📤 JAVASCRIPT: Handshake JSON request: ${JSON.stringify(handshakeRequest, null, 2)}`);
+        }
 
         const response1 = await fetch(this.url, {
             method: 'POST',
@@ -676,6 +718,10 @@ export class EncryptedOpenADPClient {
 
         const handshakeResponse = await response1.json();
         
+        if (debug.isDebugModeEnabled()) {
+            debug.debugLog(`📥 JAVASCRIPT: Handshake JSON response: ${JSON.stringify(handshakeResponse, null, 2)}`);
+        }
+
         if (handshakeResponse.error) {
             throw new OpenADPError(
                 ErrorCode.ENCRYPTION_FAILED,
@@ -689,7 +735,7 @@ export class EncryptedOpenADPClient {
         const handshakeMsg2 = new Uint8Array(atob(handshakeMsgB64).split('').map(c => c.charCodeAt(0)));
         
         // Complete handshake
-        this.noise.readMessage(handshakeMsg2);
+        await this.noise.readMessage(handshakeMsg2);
 
         if (!this.noise.handshakeComplete) {
             throw new OpenADPError(
@@ -697,6 +743,29 @@ export class EncryptedOpenADPClient {
                 "Noise-NK handshake failed to complete",
                 `URL: ${this.url}`
             );
+        }
+
+        // Debug transport keys after handshake completion
+        if (debug.isDebugModeEnabled()) {
+            debug.debugLog("Noise-NK handshake completed successfully");
+            debug.debugLog("🔑 JAVASCRIPT INITIATOR: Transport key assignment complete");
+            debug.debugLog("  - send_cipher: k1 (initiator->responder)");
+            debug.debugLog("  - recv_cipher: k2 (responder->initiator)");
+            debug.debugLog("  - JavaScript uses sendKey for encrypt, receiveKey for decrypt (initiator)");
+            
+            // Log transport cipher information
+            debug.debugLog("🔑 JAVASCRIPT INITIATOR: Transport cipher information");
+            if (this.noise.sendKey) {
+                debug.debugLog(`  - send key: ${Array.from(this.noise.sendKey).map(b => b.toString(16).padStart(2, '0')).join('')}`);
+            } else {
+                debug.debugLog("  - send key: not accessible");
+            }
+            
+            if (this.noise.receiveKey) {
+                debug.debugLog(`  - recv key: ${Array.from(this.noise.receiveKey).map(b => b.toString(16).padStart(2, '0')).join('')}`);
+            } else {
+                debug.debugLog("  - recv key: not accessible");
+            }
         }
 
         this.handshakeComplete = true;
@@ -819,23 +888,34 @@ export async function getServers(registryUrl = "") {
     const finalUrl = registryUrl || "https://servers.openadp.org/api/servers.json";
     
     try {
-        const response = await fetch(finalUrl);
-        if (!response.ok) {
-            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-        }
+        let data;
         
-        const data = await response.json();
+        // Handle file:// URLs for local testing
+        if (finalUrl.startsWith('file://')) {
+            const fs = await import('fs');
+            const path = finalUrl.replace('file://', '');
+            const fileContent = fs.readFileSync(path, 'utf8');
+            data = JSON.parse(fileContent);
+        } else {
+            const response = await fetch(finalUrl);
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+            data = await response.json();
+        }
         if (Array.isArray(data)) {
             return data.map(server => new ServerInfo(
                 server.url || server.URL,
                 server.public_key || server.noise_nk_public_key || "",
-                server.country || ""
+                server.country || "",
+                server.remaining_guesses || -1
             ));
         } else if (data.servers) {
             return data.servers.map(server => new ServerInfo(
                 server.url || server.URL,
                 server.public_key || server.noise_nk_public_key || "",
-                server.country || ""
+                server.country || "",
+                server.remaining_guesses || -1
             ));
         }
         
@@ -851,7 +931,7 @@ export async function getServers(registryUrl = "") {
  */
 export function getFallbackServerInfo() {
     return [
-        new ServerInfo("http://localhost:8080", "", "Local")
+        new ServerInfo("http://localhost:8080", "", "Local", -1)
     ];
 }
 
