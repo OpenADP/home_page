@@ -5,6 +5,7 @@
 ./quickstart-raspberry-pi.html
 ./styles.css
 ./script.js
+./apps/evault-icon.svg
 ./ghost-notes/test.html
 ./ghost-notes/test-openadp.html
 ./ghost-notes/openadp-app.js
